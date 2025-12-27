@@ -40,6 +40,10 @@ pxc iso list            # List all ISOs
 pxc iso download <url>  # Download ISO from URL
 pxc iso upload <file>   # Upload local ISO file
 pxc iso delete <name>   # Delete an ISO
+
+# Configuration
+pxc config show         # Show current config
+pxc config path         # Show config file path
 ```
 
 **For testing/development (mock mode):**
@@ -58,18 +62,31 @@ npm run dev
 
 ## Configuration
 
-The wizard stores preferences in `~/.config/pve-cli/config.json`.
+Configuration is stored in `~/.config/pxc/config.yaml`:
 
-Currently supported settings:
+```yaml
+defaults:
+  isoStorage: cephfs-iso    # Default storage for ISOs
+  vmStorage: local-lvm      # Default storage for VM disks
+  bridge: vmbr0             # Default network bridge
+  cores: 2                  # Default CPU cores
+  memory: 2048              # Default memory (MB)
+  disk: 32                  # Default disk size (GB)
 
-| Setting | Description |
-|---------|-------------|
-| `isoStorage` | Preferred storage for ISO files. Set automatically on first run when you select an ISO storage. |
+ui:
+  savePreferences: true     # Auto-save selections as defaults
+```
 
-To reset preferences, delete the config file:
+**Commands:**
+```bash
+pxc config show   # Show current configuration
+pxc config path   # Show config file path
+```
+
+Preferences are saved automatically when you use ISO commands without specifying a storage. To reset, delete the config file:
 
 ```bash
-rm ~/.config/pve-cli/config.json
+rm ~/.config/pxc/config.yaml
 ```
 
 ## Build

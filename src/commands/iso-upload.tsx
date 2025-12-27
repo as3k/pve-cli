@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Text, Box } from 'ink';
 import { uploadIso, getIsoStorages } from '../lib/proxmox.js';
+import { getDefault, setDefault, shouldSavePreferences } from '../lib/config.js';
 
 interface IsoUploadCommandProps {
 	file: string;
@@ -12,19 +13,30 @@ export function IsoUploadCommand({ file, storage }: IsoUploadCommandProps) {
 	const [error, setError] = useState<string>('');
 	const [volid, setVolid] = useState<string>('');
 	const [targetStorage, setTargetStorage] = useState<string>(storage || '');
+	const [savedPreference, setSavedPreference] = useState<boolean>(false);
 
 	useEffect(() => {
 		async function upload() {
 			try {
 				let storageToUse = storage;
 
-				// If no storage specified, find the first ISO-capable storage
+				// If no storage specified, check config then find first available
 				if (!storageToUse) {
-					const storages = await getIsoStorages();
-					if (storages.length === 0) {
-						throw new Error('No ISO-capable storage found');
+					storageToUse = getDefault('isoStorage');
+
+					if (!storageToUse) {
+						const storages = await getIsoStorages();
+						if (storages.length === 0) {
+							throw new Error('No ISO-capable storage found');
+						}
+						storageToUse = storages[0].name;
+
+						// Save this as the default for future use
+						if (shouldSavePreferences()) {
+							setDefault('isoStorage', storageToUse);
+							setSavedPreference(true);
+						}
 					}
-					storageToUse = storages[0].name;
 				}
 
 				setTargetStorage(storageToUse);
@@ -71,6 +83,7 @@ export function IsoUploadCommand({ file, storage }: IsoUploadCommandProps) {
 		<Box flexDirection="column" paddingY={1}>
 			<Text color="green">ISO uploaded successfully</Text>
 			<Text dimColor>Volume ID: {volid}</Text>
+			{savedPreference && <Text dimColor>Saved {targetStorage} as default ISO storage</Text>}
 		</Box>
 	);
 }

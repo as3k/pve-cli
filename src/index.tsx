@@ -10,6 +10,7 @@ import { IsoListCommand } from './commands/iso-list.js';
 import { IsoDownloadCommand } from './commands/iso-download.js';
 import { IsoUploadCommand } from './commands/iso-upload.js';
 import { IsoDeleteCommand } from './commands/iso-delete.js';
+import { ConfigShowCommand } from './commands/config.js';
 
 const program = new Command();
 
@@ -92,6 +93,24 @@ iso
 	.description('Delete an ISO image')
 	.action((name: string) => {
 		render(<IsoDeleteCommand name={name} />);
+	});
+
+// Config subcommands
+const config = program.command('config').description('Manage configuration');
+
+config
+	.command('show')
+	.description('Show current configuration')
+	.action(() => {
+		render(<ConfigShowCommand />);
+	});
+
+config
+	.command('path')
+	.description('Show config file path')
+	.action(() => {
+		const { getConfigPath } = require('./lib/config.js');
+		console.log(getConfigPath());
 	});
 
 program.parse();

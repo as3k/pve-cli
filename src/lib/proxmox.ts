@@ -317,21 +317,52 @@ export async function listAllIsos(): Promise<IsoFile[]> {
 }
 
 /**
- * Download an ISO from a URL to storage
+ * Download progress callback
  */
-export async function downloadIso(url: string, storage: string, filename?: string): Promise<string> {
+export type DownloadProgressCallback = (progress: {
+	percent: number;
+	speed: string;
+	eta: string;
+	downloaded: number;
+	total: number;
+}) => void;
+
+/**
+ * Download an ISO from a URL to storage with progress tracking
+ */
+export async function downloadIso(
+	url: string,
+	storage: string,
+	filename?: string,
+	onProgress?: DownloadProgressCallback
+): Promise<string> {
 	if (MOCK_MODE) {
-		await new Promise((resolve) => setTimeout(resolve, 1000));
-		const name = filename || url.split('/').pop() || 'download.iso';
-		return `${storage}:iso/${name}`;
+		// Simulate download progress
+		const fname = filename || url.split('/').pop() || 'download.iso';
+		const total = 256 * 1024 * 1024; // 256MB fake size
+
+		for (let i = 0; i <= 100; i += 5) {
+			if (onProgress) {
+				onProgress({
+					percent: i,
+					speed: '15.2 MB/s',
+					eta: `${Math.ceil((100 - i) / 10)}s`,
+					downloaded: Math.floor((total * i) / 100),
+					total,
+				});
+			}
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+
+		return `${storage}:iso/${fname}`;
 	}
 
 	try {
 		const node = await getNodeName();
 		const fname = filename || url.split('/').pop() || 'download.iso';
 
-		// Use pvesh to trigger download
-		await execa('pvesh', [
+		// Use execa with streaming to capture progress
+		const subprocess = execa('pvesh', [
 			'create',
 			`/nodes/${node}/storage/${storage}/download-url`,
 			'--url', url,
@@ -339,6 +370,34 @@ export async function downloadIso(url: string, storage: string, filename?: strin
 			'--filename', fname,
 		]);
 
+		// Parse wget progress from stderr/stdout
+		if (onProgress && subprocess.stdout) {
+			subprocess.stdout.on('data', (data: Buffer) => {
+				const line = data.toString();
+
+				// Parse wget progress: "32768K ........ ........ 26% 22.2M 8s"
+				const match = line.match(/(\d+)%\s+([\d.]+[KMG]?(?:\/s)?)\s+(\d+[smh]?)/);
+				if (match) {
+					const percent = parseInt(match[1], 10);
+					const speed = match[2];
+					const eta = match[3];
+
+					// Try to parse total from Length header
+					const lengthMatch = line.match(/Length:\s*(\d+)/);
+					const total = lengthMatch ? parseInt(lengthMatch[1], 10) : 0;
+
+					onProgress({
+						percent,
+						speed,
+						eta,
+						downloaded: Math.floor((total * percent) / 100),
+						total,
+					});
+				}
+			});
+		}
+
+		await subprocess;
 		return `${storage}:iso/${fname}`;
 	} catch (error: any) {
 		throw new Error(`Failed to download ISO: ${error.message}`);
