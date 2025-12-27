@@ -1,41 +1,97 @@
 import React, { useState, useEffect } from 'react';
 import { Text, Box } from 'ink';
 import SelectInput from 'ink-select-input';
-import { getIsoFiles } from '../lib/proxmox.js';
+import { getIsoFiles, getIsoStorages } from '../lib/proxmox.js';
+import { getIsoStoragePreference, setIsoStoragePreference } from '../lib/config.js';
 import type { StepProps } from '../lib/types.js';
 
+type Phase = 'loading' | 'select-storage' | 'select-iso';
+
 export function Iso({ onNext }: StepProps) {
-	const [isos, setIsos] = useState<Array<{ label: string; value: string | undefined }>>([]);
-	const [loading, setLoading] = useState(true);
+	const [phase, setPhase] = useState<Phase>('loading');
+	const [storages, setStorages] = useState<Array<{ label: string; value: string }>>([]);
+	const [selectedStorage, setSelectedStorage] = useState<string>('');
+	const [isos, setIsos] = useState<Array<{ label: string; value: string }>>([]);
 
+	// Initial load: check for saved preference and available storages
 	useEffect(() => {
-		// TODO: Make this configurable or auto-detect ISO storage
-		const isoStorage = 'local';
+		async function init() {
+			const savedStorage = getIsoStoragePreference();
+			const availableStorages = await getIsoStorages();
 
-		getIsoFiles(isoStorage)
+			if (availableStorages.length === 0) {
+				// No ISO storages available, skip to ISO selection with empty list
+				setIsos([{ label: '(No ISO)', value: '' }]);
+				setPhase('select-iso');
+				return;
+			}
+
+			// Check if saved storage still exists
+			const savedExists = savedStorage && availableStorages.some(s => s.name === savedStorage);
+
+			if (savedExists) {
+				// Use saved storage directly
+				setSelectedStorage(savedStorage);
+				loadIsos(savedStorage);
+			} else if (availableStorages.length === 1) {
+				// Only one storage available, use it directly
+				const storage = availableStorages[0].name;
+				setSelectedStorage(storage);
+				setIsoStoragePreference(storage);
+				loadIsos(storage);
+			} else {
+				// Multiple storages, let user choose
+				setStorages(availableStorages.map(s => ({
+					label: `${s.name} (${s.type})`,
+					value: s.name,
+				})));
+				setPhase('select-storage');
+			}
+		}
+
+		init().catch(() => {
+			setIsos([{ label: '(No ISO)', value: '' }]);
+			setPhase('select-iso');
+		});
+	}, []);
+
+	function loadIsos(storage: string) {
+		getIsoFiles(storage)
 			.then((items) => {
 				const options = items.map((iso) => ({
 					label: iso.filename,
 					value: iso.volid,
 				}));
-
-				// Always add "No ISO" option
-				options.unshift({ label: '(No ISO)', value: undefined });
-
+				options.unshift({ label: '(No ISO)', value: '' });
 				setIsos(options);
-				setLoading(false);
+				setPhase('select-iso');
 			})
 			.catch(() => {
-				// If we can't load ISOs, just offer "No ISO"
-				setIsos([{ label: '(No ISO)', value: undefined }]);
-				setLoading(false);
+				setIsos([{ label: '(No ISO)', value: '' }]);
+				setPhase('select-iso');
 			});
-	}, []);
+	}
 
-	if (loading) {
+	function handleStorageSelect(item: { value: string }) {
+		setSelectedStorage(item.value);
+		setIsoStoragePreference(item.value);
+		loadIsos(item.value);
+	}
+
+	if (phase === 'loading') {
 		return (
 			<Box flexDirection="column" paddingY={1}>
-				<Text dimColor>Loading ISO files...</Text>
+				<Text dimColor>Loading ISO storages...</Text>
+			</Box>
+		);
+	}
+
+	if (phase === 'select-storage') {
+		return (
+			<Box flexDirection="column" paddingY={1}>
+				<Text>Select storage for ISO files</Text>
+				<Text dimColor>(This will be remembered for future use)</Text>
+				<SelectInput items={storages} onSelect={handleStorageSelect} />
 			</Box>
 		);
 	}
@@ -43,7 +99,8 @@ export function Iso({ onNext }: StepProps) {
 	return (
 		<Box flexDirection="column" paddingY={1}>
 			<Text>Select installation ISO (optional)</Text>
-			<SelectInput items={isos} onSelect={(item) => onNext({ isoVolid: item.value })} />
+			{selectedStorage && <Text dimColor>from {selectedStorage}</Text>}
+			<SelectInput items={isos} onSelect={(item) => onNext({ isoVolid: item.value || undefined })} />
 		</Box>
 	);
 }
