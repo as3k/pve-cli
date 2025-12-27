@@ -1,10 +1,14 @@
 import { execa } from 'execa';
 import type { ProxmoxStorage, ProxmoxBridge, IsoFile, VmState } from './types.js';
 
+const MOCK_MODE = process.env.MOCK_PROXMOX === '1';
+
 /**
  * Check if we're running on a Proxmox node
  */
 export async function isProxmoxNode(): Promise<boolean> {
+	if (MOCK_MODE) return true;
+
 	try {
 		await execa('which', ['qm']);
 		return true;
@@ -17,6 +21,8 @@ export async function isProxmoxNode(): Promise<boolean> {
  * Get the next available VM ID
  */
 export async function getNextVmid(): Promise<number> {
+	if (MOCK_MODE) return 100;
+
 	try {
 		const { stdout } = await execa('pvesh', ['get', '/cluster/nextid']);
 		return parseInt(stdout.trim(), 10);
@@ -29,6 +35,8 @@ export async function getNextVmid(): Promise<number> {
  * Check if a VM ID is already in use
  */
 export async function isVmidAvailable(vmid: number): Promise<boolean> {
+	if (MOCK_MODE) return true;
+
 	try {
 		await execa('qm', ['status', vmid.toString()]);
 		return false; // VM exists
@@ -41,6 +49,14 @@ export async function isVmidAvailable(vmid: number): Promise<boolean> {
  * Get available storage pools that support VM disks
  */
 export async function getStorages(): Promise<ProxmoxStorage[]> {
+	if (MOCK_MODE) {
+		return [
+			{ name: 'local-lvm', type: 'lvmthin', available: true, content: ['images'] },
+			{ name: 'ceph-pool', type: 'rbd', available: true, content: ['images'] },
+			{ name: 'nfs-storage', type: 'nfs', available: true, content: ['images', 'iso'] },
+		];
+	}
+
 	try {
 		const { stdout } = await execa('pvesm', ['status']);
 		const lines = stdout.split('\n').slice(1); // Skip header
@@ -74,6 +90,13 @@ export async function getStorages(): Promise<ProxmoxStorage[]> {
  * Get available network bridges
  */
 export async function getBridges(node: string = 'localhost'): Promise<ProxmoxBridge[]> {
+	if (MOCK_MODE) {
+		return [
+			{ name: 'vmbr0', active: true },
+			{ name: 'vmbr1', active: true },
+		];
+	}
+
 	try {
 		const { stdout } = await execa('pvesh', ['get', `/nodes/${node}/network`, '--type', 'bridge']);
 		const data = JSON.parse(stdout);
@@ -92,6 +115,14 @@ export async function getBridges(node: string = 'localhost'): Promise<ProxmoxBri
  * Get ISO files from a storage
  */
 export async function getIsoFiles(storage: string = 'local'): Promise<IsoFile[]> {
+	if (MOCK_MODE) {
+		return [
+			{ volid: 'local:iso/alpine-3.18.iso', filename: 'alpine-3.18.iso', size: 157286400 },
+			{ volid: 'local:iso/debian-12.iso', filename: 'debian-12.iso', size: 629145600 },
+			{ volid: 'local:iso/ubuntu-24.04.iso', filename: 'ubuntu-24.04.iso', size: 5771362304 },
+		];
+	}
+
 	try {
 		const { stdout } = await execa('pvesm', ['list', storage]);
 		const lines = stdout.split('\n').slice(1); // Skip header
@@ -124,6 +155,15 @@ export async function getIsoFiles(storage: string = 'local'): Promise<IsoFile[]>
  */
 export async function createVm(state: VmState): Promise<void> {
 	const { vmid, name, cores, memoryMb, diskGb, storage, bridge, isoVolid } = state;
+
+	if (MOCK_MODE) {
+		// Simulate VM creation delay
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+		console.log(
+			`[MOCK] Would create VM ${vmid} (${name}): ${cores} cores, ${memoryMb}MB RAM, ${diskGb}GB disk on ${storage}, bridge ${bridge}${isoVolid ? `, ISO: ${isoVolid}` : ''}`
+		);
+		return;
+	}
 
 	try {
 		// Step 1: Create the VM
@@ -174,6 +214,8 @@ export async function createVm(state: VmState): Promise<void> {
  * Get current node name
  */
 export async function getNodeName(): Promise<string> {
+	if (MOCK_MODE) return 'mocknode';
+
 	try {
 		const { stdout } = await execa('hostname');
 		return stdout.trim();

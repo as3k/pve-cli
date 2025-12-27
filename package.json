@@ -7,8 +7,9 @@
     "proxmox-vm": "./dist/index.js"
   },
   "scripts": {
-    "start": "tsx src/index.tsx",
-    "dev": "tsx watch src/index.tsx",
+    "start": "npx tsx src/index.tsx",
+    "dev": "npx tsx watch src/index.tsx",
+    "dev:mock": "MOCK_PROXMOX=1 npx tsx src/index.tsx",
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
