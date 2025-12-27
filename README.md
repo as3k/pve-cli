@@ -29,11 +29,17 @@ npm install -g pxc
 ```bash
 pxc                     # Show help
 pxc create              # Create a new VM (interactive wizard)
-pxc list                # List all VMs
+pxc list                # List all VMs and containers
 pxc ls                  # Alias for list
-pxc start <vmid>        # Start a VM
-pxc stop <vmid>         # Stop a VM (graceful)
+pxc start <vmid>        # Start a VM or container
+pxc stop <vmid>         # Stop a VM or container (graceful)
 pxc stop <vmid> --force # Force stop a VM
+
+# ISO Management
+pxc iso list            # List all ISOs
+pxc iso download <url>  # Download ISO from URL
+pxc iso upload <file>   # Upload local ISO file
+pxc iso delete <name>   # Delete an ISO
 ```
 
 **For testing/development (mock mode):**

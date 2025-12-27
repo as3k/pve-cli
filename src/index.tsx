@@ -6,12 +6,16 @@ import { CreateCommand } from './commands/create.js';
 import { ListCommand } from './commands/list.js';
 import { StartCommand } from './commands/start.js';
 import { StopCommand } from './commands/stop.js';
+import { IsoListCommand } from './commands/iso-list.js';
+import { IsoDownloadCommand } from './commands/iso-download.js';
+import { IsoUploadCommand } from './commands/iso-upload.js';
+import { IsoDeleteCommand } from './commands/iso-delete.js';
 
 const program = new Command();
 
 program
 	.name('pxc')
-	.description('Modern CLI for managing Proxmox VMs')
+	.description('Modern CLI for managing Proxmox VMs and containers')
 	.version('0.1.0');
 
 program
@@ -24,14 +28,14 @@ program
 program
 	.command('list')
 	.alias('ls')
-	.description('List all VMs')
+	.description('List all VMs and containers')
 	.action(() => {
 		render(<ListCommand />);
 	});
 
 program
 	.command('start <vmid>')
-	.description('Start a VM')
+	.description('Start a VM or container')
 	.action((vmid: string) => {
 		const id = parseInt(vmid, 10);
 		if (isNaN(id)) {
@@ -43,8 +47,8 @@ program
 
 program
 	.command('stop <vmid>')
-	.description('Stop a VM')
-	.option('-f, --force', 'Force stop the VM (hard shutdown)')
+	.description('Stop a VM or container')
+	.option('-f, --force', 'Force stop (hard shutdown, VMs only)')
 	.action((vmid: string, options: { force?: boolean }) => {
 		const id = parseInt(vmid, 10);
 		if (isNaN(id)) {
@@ -52,6 +56,42 @@ program
 			process.exit(1);
 		}
 		render(<StopCommand vmid={id} force={options.force ?? false} />);
+	});
+
+// ISO subcommands
+const iso = program.command('iso').description('Manage ISO images');
+
+iso
+	.command('list')
+	.alias('ls')
+	.description('List all ISO images')
+	.action(() => {
+		render(<IsoListCommand />);
+	});
+
+iso
+	.command('download <url>')
+	.description('Download an ISO from a URL')
+	.option('-s, --storage <storage>', 'Target storage (default: first available)')
+	.option('-n, --name <filename>', 'Override filename')
+	.action((url: string, options: { storage?: string; name?: string }) => {
+		render(<IsoDownloadCommand url={url} storage={options.storage} filename={options.name} />);
+	});
+
+iso
+	.command('upload <file>')
+	.description('Upload a local ISO file')
+	.option('-s, --storage <storage>', 'Target storage (default: first available)')
+	.action((file: string, options: { storage?: string }) => {
+		render(<IsoUploadCommand file={file} storage={options.storage} />);
+	});
+
+iso
+	.command('delete <name>')
+	.alias('rm')
+	.description('Delete an ISO image')
+	.action((name: string) => {
+		render(<IsoDeleteCommand name={name} />);
 	});
 
 program.parse();

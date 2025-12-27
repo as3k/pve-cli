@@ -53,6 +53,7 @@ export interface IsoFile {
 	volid: string;
 	filename: string;
 	size: number;
+	storage: string;
 }
 
 /**

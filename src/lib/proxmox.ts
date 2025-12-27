@@ -147,9 +147,9 @@ export async function getBridges(node: string = 'localhost'): Promise<ProxmoxBri
 export async function getIsoFiles(storage: string = 'local'): Promise<IsoFile[]> {
 	if (MOCK_MODE) {
 		return [
-			{ volid: 'local:iso/alpine-3.18.iso', filename: 'alpine-3.18.iso', size: 157286400 },
-			{ volid: 'local:iso/debian-12.iso', filename: 'debian-12.iso', size: 629145600 },
-			{ volid: 'local:iso/ubuntu-24.04.iso', filename: 'ubuntu-24.04.iso', size: 5771362304 },
+			{ volid: `${storage}:iso/alpine-3.18.iso`, filename: 'alpine-3.18.iso', size: 157286400, storage },
+			{ volid: `${storage}:iso/debian-12.iso`, filename: 'debian-12.iso', size: 629145600, storage },
+			{ volid: `${storage}:iso/ubuntu-24.04.iso`, filename: 'ubuntu-24.04.iso', size: 5771362304, storage },
 		];
 	}
 
@@ -163,13 +163,15 @@ export async function getIsoFiles(storage: string = 'local'): Promise<IsoFile[]>
 			if (!line.includes('.iso')) continue;
 
 			const parts = line.split(/\s+/);
-			const [volid, , size] = parts;
+			// Format: Volid Format Type Size [VMID]
+			const [volid, , , size] = parts;
 			const filename = volid.split('/').pop() || volid;
 
 			isos.push({
 				volid,
 				filename,
 				size: parseInt(size, 10),
+				storage,
 			});
 		}
 
@@ -284,6 +286,106 @@ export async function listVms(): Promise<VmInfo[]> {
 		}));
 	} catch (error: any) {
 		throw new Error(`Failed to list VMs: ${error.message}`);
+	}
+}
+
+/**
+ * List all ISOs across all ISO-capable storages
+ */
+export async function listAllIsos(): Promise<IsoFile[]> {
+	if (MOCK_MODE) {
+		return [
+			{ volid: 'local:iso/alpine-3.18.iso', filename: 'alpine-3.18.iso', size: 157286400, storage: 'local' },
+			{ volid: 'local:iso/debian-12.iso', filename: 'debian-12.iso', size: 629145600, storage: 'local' },
+			{ volid: 'cephfs-iso:iso/ubuntu-24.04.iso', filename: 'ubuntu-24.04.iso', size: 5771362304, storage: 'cephfs-iso' },
+		];
+	}
+
+	try {
+		const storages = await getIsoStorages();
+		const allIsos: IsoFile[] = [];
+
+		for (const storage of storages) {
+			const isos = await getIsoFiles(storage.name);
+			allIsos.push(...isos.map((iso) => ({ ...iso, storage: storage.name })));
+		}
+
+		return allIsos;
+	} catch (error: any) {
+		throw new Error(`Failed to list ISOs: ${error.message}`);
+	}
+}
+
+/**
+ * Download an ISO from a URL to storage
+ */
+export async function downloadIso(url: string, storage: string, filename?: string): Promise<string> {
+	if (MOCK_MODE) {
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+		const name = filename || url.split('/').pop() || 'download.iso';
+		return `${storage}:iso/${name}`;
+	}
+
+	try {
+		const node = await getNodeName();
+		const fname = filename || url.split('/').pop() || 'download.iso';
+
+		// Use pvesh to trigger download
+		await execa('pvesh', [
+			'create',
+			`/nodes/${node}/storage/${storage}/download-url`,
+			'--url', url,
+			'--content', 'iso',
+			'--filename', fname,
+		]);
+
+		return `${storage}:iso/${fname}`;
+	} catch (error: any) {
+		throw new Error(`Failed to download ISO: ${error.message}`);
+	}
+}
+
+/**
+ * Upload a local ISO file to storage
+ */
+export async function uploadIso(filePath: string, storage: string): Promise<string> {
+	if (MOCK_MODE) {
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+		const filename = filePath.split('/').pop() || 'upload.iso';
+		return `${storage}:iso/${filename}`;
+	}
+
+	try {
+		const node = await getNodeName();
+		const filename = filePath.split('/').pop() || 'upload.iso';
+
+		// Use the Proxmox upload endpoint
+		await execa('pvesh', [
+			'create',
+			`/nodes/${node}/storage/${storage}/upload`,
+			'--content', 'iso',
+			'--filename', filePath,
+		]);
+
+		return `${storage}:iso/${filename}`;
+	} catch (error: any) {
+		throw new Error(`Failed to upload ISO: ${error.message}`);
+	}
+}
+
+/**
+ * Delete an ISO from storage
+ */
+export async function deleteIso(volid: string): Promise<void> {
+	if (MOCK_MODE) {
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		return;
+	}
+
+	try {
+		await execa('pvesm', ['free', volid]);
+	} catch (error: any) {
+		throw new Error(`Failed to delete ISO: ${error.message}`);
 	}
 }
 
