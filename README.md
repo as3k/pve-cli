@@ -44,6 +44,22 @@ Mock mode allows you to test the wizard UI without Proxmox tools installed. It u
 npm run dev
 ```
 
+## Configuration
+
+The wizard stores preferences in `~/.config/pve-cli/config.json`.
+
+Currently supported settings:
+
+| Setting | Description |
+|---------|-------------|
+| `isoStorage` | Preferred storage for ISO files. Set automatically on first run when you select an ISO storage. |
+
+To reset preferences, delete the config file:
+
+```bash
+rm ~/.config/pve-cli/config.json
+```
+
 ## Build
 
 Compile to JavaScript:
@@ -79,6 +95,7 @@ src/
 └── lib/               # Utilities
     ├── types.ts       # Type definitions
     ├── validators.ts  # Input validation
+    ├── config.ts      # User preferences
     └── proxmox.ts     # Proxmox CLI wrappers
 ```
 
