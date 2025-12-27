@@ -8,7 +8,9 @@ export function ConfigShowCommand() {
 	const configPath = getConfigPath();
 
 	const hasDefaults = config.defaults && Object.keys(config.defaults).length > 0;
+	const hasPackages = config.packages && Object.keys(config.packages).length > 0;
 	const hasUi = config.ui && Object.keys(config.ui).length > 0;
+	const hasAny = hasDefaults || hasPackages || hasUi;
 
 	return (
 		<Box flexDirection="column" paddingY={1}>
@@ -20,7 +22,7 @@ export function ConfigShowCommand() {
 			<Text dimColor>{configPath}</Text>
 			<Text> </Text>
 
-			{!hasDefaults && !hasUi ? (
+			{!hasAny ? (
 				<Text dimColor>No configuration set</Text>
 			) : (
 				<>
@@ -40,11 +42,26 @@ export function ConfigShowCommand() {
 								<Text>  <Text dimColor>cores:</Text> {config.defaults.cores}</Text>
 							)}
 							{config.defaults?.memory && (
-								<Text>  <Text dimColor>memory:</Text> {config.defaults.memory}</Text>
+								<Text>  <Text dimColor>memory:</Text> {config.defaults.memory}MB</Text>
 							)}
 							{config.defaults?.disk && (
-								<Text>  <Text dimColor>disk:</Text> {config.defaults.disk}</Text>
+								<Text>  <Text dimColor>disk:</Text> {config.defaults.disk}GB</Text>
 							)}
+							{config.defaults?.node && (
+								<Text>  <Text dimColor>node:</Text> {config.defaults.node}</Text>
+							)}
+							{config.defaults?.package && (
+								<Text>  <Text dimColor>package:</Text> {config.defaults.package}</Text>
+							)}
+						</>
+					)}
+
+					{hasPackages && (
+						<>
+							<Text bold color="cyan">packages:</Text>
+							{Object.entries(config.packages!).map(([name, pkg]) => (
+								<Text key={name}>  <Text color="cyan">{name}:</Text> {pkg.cores}c / {pkg.memory}MB / {pkg.disk}GB</Text>
+							))}
 						</>
 					)}
 

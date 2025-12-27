@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Text, Box } from 'ink';
 import SelectInput from 'ink-select-input';
 import { getIsoFiles, getIsoStorages } from '../lib/proxmox.js';
-import { getIsoStoragePreference, setIsoStoragePreference } from '../lib/config.js';
+import { getIsoStoragePreference, setIsoStoragePreference, getResolvedDefaults } from '../lib/config.js';
 import type { StepProps } from '../lib/types.js';
 
 type Phase = 'loading' | 'select-storage' | 'select-iso';
 
-export function Iso({ onNext }: StepProps) {
+export function Iso({ onNext, packageName }: StepProps) {
+	const defaults = useMemo(() => getResolvedDefaults(packageName), [packageName]);
 	const [phase, setPhase] = useState<Phase>('loading');
 	const [storages, setStorages] = useState<Array<{ label: string; value: string }>>([]);
 	const [selectedStorage, setSelectedStorage] = useState<string>('');
@@ -16,7 +17,8 @@ export function Iso({ onNext }: StepProps) {
 	// Initial load: check for saved preference and available storages
 	useEffect(() => {
 		async function init() {
-			const savedStorage = getIsoStoragePreference();
+			// Check package defaults first, then saved preference
+			const savedStorage = defaults.isoStorage || getIsoStoragePreference();
 			const availableStorages = await getIsoStorages();
 
 			if (availableStorages.length === 0) {

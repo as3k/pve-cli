@@ -12,7 +12,11 @@ import { Success } from '../steps/Success.js';
 import { Error } from '../steps/Error.js';
 import type { VmState, WizardStep } from '../lib/types.js';
 
-export function CreateCommand() {
+interface CreateCommandProps {
+	packageName?: string;
+}
+
+export function CreateCommand({ packageName }: CreateCommandProps) {
 	const [step, setStep] = useState<WizardStep>('welcome');
 	const [state, setState] = useState<Partial<VmState>>({});
 	const [error, setError] = useState<string>('');
@@ -44,10 +48,10 @@ export function CreateCommand() {
 		<Box>
 			{step === 'welcome' && <Welcome onNext={() => handleNext({})} onError={handleError} />}
 			{step === 'identity' && <Identity state={state} onNext={handleNext} />}
-			{step === 'compute' && <Compute state={state} onNext={handleNext} />}
-			{step === 'storage' && <Storage state={state} onNext={handleNext} />}
-			{step === 'network' && <Network state={state} onNext={handleNext} />}
-			{step === 'iso' && <Iso state={state} onNext={handleNext} />}
+			{step === 'compute' && <Compute state={state} onNext={handleNext} packageName={packageName} />}
+			{step === 'storage' && <Storage state={state} onNext={handleNext} packageName={packageName} />}
+			{step === 'network' && <Network state={state} onNext={handleNext} packageName={packageName} />}
+			{step === 'iso' && <Iso state={state} onNext={handleNext} packageName={packageName} />}
 			{step === 'summary' && <Summary state={state} onNext={handleNext} />}
 			{step === 'execute' && (
 				<Execute state={state as VmState} onSuccess={handleSuccess} onError={handleError} />

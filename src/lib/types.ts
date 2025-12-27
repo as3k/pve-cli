@@ -63,6 +63,7 @@ export interface StepProps {
 	state: Partial<VmState>;
 	onNext: (updates: Partial<VmState>) => void;
 	onBack?: () => void;
+	packageName?: string;
 }
 
 /**

@@ -11,6 +11,12 @@ import { IsoDownloadCommand } from './commands/iso-download.js';
 import { IsoUploadCommand } from './commands/iso-upload.js';
 import { IsoDeleteCommand } from './commands/iso-delete.js';
 import { ConfigShowCommand } from './commands/config.js';
+import {
+	PackagesListCommand,
+	PackagesShowCommand,
+	PackagesAddCommand,
+	PackagesDeleteCommand,
+} from './commands/packages.js';
 
 const program = new Command();
 
@@ -22,8 +28,9 @@ program
 program
 	.command('create')
 	.description('Create a new VM with the interactive wizard')
-	.action(() => {
-		render(<CreateCommand />);
+	.option('-p, --package <name>', 'Use a predefined package for defaults')
+	.action((options: { package?: string }) => {
+		render(<CreateCommand packageName={options.package} />);
 	});
 
 program
@@ -111,6 +118,43 @@ config
 	.action(() => {
 		const { getConfigPath } = require('./lib/config.js');
 		console.log(getConfigPath());
+	});
+
+// Packages subcommands
+const packages = program.command('packages').description('Manage VM/container presets');
+
+packages
+	.command('list')
+	.alias('ls')
+	.description('List all packages')
+	.action(() => {
+		render(<PackagesListCommand />);
+	});
+
+packages
+	.command('show <name>')
+	.description('Show package details')
+	.action((name: string) => {
+		render(<PackagesShowCommand name={name} />);
+	});
+
+packages
+	.command('add <name>')
+	.description('Add or edit a package')
+	.option('-c, --cores <n>', 'CPU cores', parseInt)
+	.option('-m, --memory <mb>', 'Memory in MB', parseInt)
+	.option('-d, --disk <gb>', 'Disk in GB', parseInt)
+	.option('-b, --bridge <name>', 'Network bridge')
+	.action((name: string, options: { cores?: number; memory?: number; disk?: number; bridge?: string }) => {
+		render(<PackagesAddCommand name={name} cores={options.cores} memory={options.memory} disk={options.disk} bridge={options.bridge} />);
+	});
+
+packages
+	.command('delete <name>')
+	.alias('rm')
+	.description('Delete a package')
+	.action((name: string) => {
+		render(<PackagesDeleteCommand name={name} />);
 	});
 
 program.parse();

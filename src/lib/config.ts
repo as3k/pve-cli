@@ -10,6 +10,19 @@ const CONFIG_FILE = join(CONFIG_DIR, 'config.yaml');
 const LEGACY_CONFIG_FILE = join(homedir(), '.config', 'pve-cli', 'config.json');
 
 /**
+ * VM/Container package preset
+ */
+export interface Package {
+	cores?: number;
+	memory?: number; // MB
+	disk?: number; // GB
+	bridge?: string;
+	node?: string;
+	isoStorage?: string;
+	vmStorage?: string;
+}
+
+/**
  * Configuration structure
  */
 export interface Config {
@@ -20,7 +33,10 @@ export interface Config {
 		cores?: number;
 		memory?: number;
 		disk?: number;
+		node?: string;
+		package?: string; // default package to use
 	};
+	packages?: Record<string, Package>;
 	ui?: {
 		savePreferences?: boolean;
 	};
@@ -141,4 +157,80 @@ export function getIsoStoragePreference(): string | undefined {
 
 export function setIsoStoragePreference(storage: string): void {
 	setDefault('isoStorage', storage);
+}
+
+/**
+ * Get all packages
+ */
+export function getPackages(): Record<string, Package> {
+	const config = loadConfig();
+	return config.packages || {};
+}
+
+/**
+ * Get a specific package
+ */
+export function getPackage(name: string): Package | undefined {
+	const config = loadConfig();
+	return config.packages?.[name];
+}
+
+/**
+ * Set/update a package
+ */
+export function setPackage(name: string, pkg: Package): void {
+	const config = loadConfig();
+	if (!config.packages) {
+		config.packages = {};
+	}
+	config.packages[name] = pkg;
+	saveConfig(config);
+}
+
+/**
+ * Delete a package
+ */
+export function deletePackage(name: string): boolean {
+	const config = loadConfig();
+	if (config.packages?.[name]) {
+		delete config.packages[name];
+		saveConfig(config);
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Get resolved defaults (merges package defaults with simple defaults)
+ */
+export function getResolvedDefaults(packageName?: string): Partial<Package> {
+	const config = loadConfig();
+	const defaults = config.defaults || {};
+
+	// Start with simple defaults
+	const resolved: Partial<Package> = {
+		cores: defaults.cores,
+		memory: defaults.memory,
+		disk: defaults.disk,
+		bridge: defaults.bridge,
+		node: defaults.node,
+		isoStorage: defaults.isoStorage,
+		vmStorage: defaults.vmStorage,
+	};
+
+	// Determine which package to use
+	const pkgName = packageName || defaults.package;
+	if (pkgName && config.packages?.[pkgName]) {
+		const pkg = config.packages[pkgName];
+		// Package values override defaults
+		if (pkg.cores !== undefined) resolved.cores = pkg.cores;
+		if (pkg.memory !== undefined) resolved.memory = pkg.memory;
+		if (pkg.disk !== undefined) resolved.disk = pkg.disk;
+		if (pkg.bridge !== undefined) resolved.bridge = pkg.bridge;
+		if (pkg.node !== undefined) resolved.node = pkg.node;
+		if (pkg.isoStorage !== undefined) resolved.isoStorage = pkg.isoStorage;
+		if (pkg.vmStorage !== undefined) resolved.vmStorage = pkg.vmStorage;
+	}
+
+	return resolved;
 }
