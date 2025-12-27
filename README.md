@@ -24,13 +24,21 @@ npm install
 
 ## Usage
 
-Run the wizard:
+**On a Proxmox VE node:**
 
 ```bash
 npm start
 ```
 
-Or in development mode with auto-reload:
+**For testing/development (mock mode):**
+
+```bash
+npm run dev:mock
+```
+
+Mock mode allows you to test the wizard UI without Proxmox tools installed. It uses fake data for storage pools, bridges, and ISOs.
+
+**Development with auto-reload:**
 
 ```bash
 npm run dev
