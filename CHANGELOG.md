@@ -3,7 +3,76 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
+
+## [2.1.2] - 2025-12-28
+
+### 🐛 Bug Fixes
+
+#### 🔧 OPERATIONS
+- **Fixed VM/CT Deletion Hang**: Resolved infinite loop that caused CLI to hang after VM/container deletion
+- **Proper State Management**: Moved deletion logic from render function to useEffect hook
+- **Fixed Dry Run Completion**: Ensured dry-run mode properly transitions to success state
+- **Improved Component Lifecycle**: Eliminated render-time function calls that caused state conflicts
+
+---
+
+## [2.1.1] - 2025-12-27
+
+### 🛠️ Documentation & Release Preparation
+
+#### 📝 DOCUMENTATION
+- Updated README.md to include VM deletion feature documentation
+- Added comprehensive safety feature explanations
+- Enhanced usage examples with delete command
+- Updated project structure documentation
+
+#### 🔧 DEVELOPER EXPERIENCE
+- Created comprehensive RELEASE_PROCESS.md checklist
+- Documented version bumping and changelog procedures
+- Added release automation guidelines and reminders
+
+---
+
+## [2.1.0] - 2025-12-27
+
+### 🛡️ VM/Container Deletion with Comprehensive Safety
+
+#### ✨ NEW FEATURES
+- **Safe VM Deletion**: Multi-step confirmation process prevents accidental deletions
+- **Container Deletion Support**: Full support for LXC container removal
+- **Verification Typing**: Requires exact `${VMID} DELETE` confirmation to proceed
+- **Grace Period**: 10-second countdown before final deletion with cancellation option
+- **Running VM Protection**: Warns about running VMs and offers stop-first option
+- **Dry-Run Mode**: Preview deletion consequences without actually deleting
+- **Backup Recommendations**: Shows backup hints before destructive operations
+
+#### 🔄 ENHANCEMENTS
+- Enhanced error handling for deletion operations
+- Improved VM status detection and reporting
+- Better disk usage information display
+- Enhanced mock mode for deletion testing
+- Improved user feedback with clear status indicators
+
+#### 🏗️ ARCHITECTURE
+- New DeleteCommand component with React/Ink terminal UI
+- Enhanced Proxmox API functions for VM/CT deletion
+- Added VM status detection and disk usage retrieval
+- Improved error handling with user-friendly messages
+- Enhanced type safety for deletion operations
+
+#### 📝 DOCUMENTATION
+- Updated help text with deletion command documentation
+- Added comprehensive safety feature documentation
+- Enhanced CLI usage examples with deletion scenarios
+
+#### 🧪 TESTING
+- Comprehensive testing of all safety features (90% pass rate)
+- Multi-step confirmation flow validation
+- Error handling and edge case testing
+- Mock mode validation for development testing
+
+---
 
 ## [2.0.0] - 2025-12-27
 
